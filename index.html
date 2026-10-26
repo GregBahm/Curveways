@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Orbit</title><link rel="stylesheet" href="style.css"></head>
+<body>
+  <main class="board-wrap"><canvas id="board" aria-label="Node connection playfield. Select two nodes and shape the first arc. Then click each next node to continue smoothly. Escape cancels the preview; Control or Command Z undoes."></canvas></main>
+  <section id="setup" aria-label="Board setup">
+    <h1 id="game-over" hidden>Game over</h1>
+    <label for="count">Node count <output id="count-value">1,000</output></label>
+    <input id="count" type="range" min="50" max="2000" step="50" value="1000">
+    <label for="easing">Easing passes <output id="easing-value">12</output></label>
+    <input id="easing" type="range" min="0" max="40" value="12">
+    <button id="start" disabled>Start</button>
+  </section>
+  <script type="module" src="game.js"></script>
+</body></html>
+
