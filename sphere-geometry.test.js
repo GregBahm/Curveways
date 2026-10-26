@@ -2,6 +2,39 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as g from './sphere-geometry.js';
 const p=(x,y,z)=>g.unit({x,y,z});
+test('each directed node pair can be connected once, regardless of arc shape',()=>{
+  const a=p(1,0,0),b=p(0,1,0),c=p(1,1,0);
+  const first=g.throughArc(a,b,p(1,1,1)),differentApproach=g.throughArc(a,b,p(1,1,-1));
+  assert.equal(g.conflicts(first,differentApproach),false);
+  assert.equal(g.legal(differentApproach,[first]),false);
+  const reverse=g.throughArc(b,a,p(1,1,-1));
+  assert.equal(g.legal(reverse,[first]),true);
+  assert.equal(g.legal(g.throughArc(b,a,p(1,1,1)),[reverse]),false);
+  const indirect=[g.greatArc(a,c),g.greatArc(c,b)];
+  assert.equal(g.legal(differentApproach,indirect),true);
+  const history=[first];history.pop();
+  assert.equal(g.legal(differentApproach,history),true);
+  // A new object representing the same node must not bypass the rule.
+  assert.equal(g.legal(g.throughArc({...a},{...b},p(1,1,-1)),[first]),false);
+});
+test('nearly tangent small circles do not invent crossings beside a shared node',()=>{
+  const a={x:.006222088046432832,y:.003220363055832466,z:.9999754571398894};
+  const b={x:.0012393641027113177,y:.0054712123389746604,z:.9999842647822829};
+  const mid={x:.0018456760667177835,y:-.00048027886093696587,z:.9999981814043825};
+  const target={x:.004874186356069392,y:-.00006513759181691707,z:.9999881189616507};
+  const first=g.throughArc(a,b,mid),next=g.tangentArc(b,target,g.endTangent(first));
+  assert.equal(g.conflicts(first,next),false);
+  assert.equal(g.conflicts(next,first),false);
+  assert.equal(g.legal(next,[first]),true);
+  assert.equal(g.hasLegalContinuation([target],[first]),true);
+  assert.equal(g.conflicts(first,g.throughArc(b,a,mid)),true);
+});
+test('shared-node arcs still reject a second crossing away from their junction',()=>{
+  const a=p(1,0,0),b=p(0,1,0),mid=p(-1,0,0);
+  const equator=g.throughArc(a,b,mid);
+  const crossing=g.throughArc(a,p(-1,-1,1),p(-1,0,0));
+  assert.equal(g.conflicts(equator,crossing),true);
+});
 test('spherical random fields and easing remain on the surface',()=>{
   let nodes=g.randomNodes(1000);
   for(let i=0;i<12;i++)nodes=g.easeNodes(nodes);

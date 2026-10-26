@@ -11,8 +11,10 @@ Run `npm install`, then `npm start`, and open http://localhost:3000. Run `npm te
 - Adjust the floating setup panel to preview 50–2,000 nodes and 0–40 easing passes. Settings persist across refreshes. Nodes are sampled uniformly over the entire sphere, then repel nearby nodes along its surface.
 - Press Start. Select two visible nodes, move over the sphere to shape the first arc, and click to place it. Before selecting the second node, hovering previews the shortest surface route.
 - Hover over each next node to preview a circular arc that inherits the previous arc's directed surface tangent. Click to extend the chain. Every arc lies on the sphere; these are small-circle arcs, including great circles as a special case.
-- Middle-button drag rotates the sphere. Scroll zooms around the pointer. Nodes on the far side are hidden and cannot be selected; rotate to reach them. Rotation is available while shaping or previewing an arc.
+- Middle-button drag pans the sphere in screen space; right-button drag rotates it. A right-click without dragging undoes on release. Scroll zooms around the pointer. Nodes on the far side are hidden and cannot be selected; rotate to reach them. Rotation is available while shaping or previewing an arc.
 - Arcs may meet at shared node endpoints. Crossings elsewhere, overlaps, and retracing are invalid. Intersection checks use the sphere geometry, independently of the current camera view.
+- Each directed node pair can be connected once: A to B once and B to A once. Indirect routes do not count. Undo frees the removed directed connection.
+- The sphere and controls are grayscale. The chain gradients from deep blue to bright cyan across its full surface length, updating on placement and undo. Invalid previews are red.
 - Right-click or Ctrl/Cmd+Z undoes. Escape cancels the current preview while retaining the chain endpoint.
 - If every possible next connection is blocked, colors invert and the Game over setup panel appears. Hover still previews blocked moves. Undo restores play, including after adjusting the new-game settings. Start generates a new board.
 

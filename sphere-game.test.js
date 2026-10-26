@@ -11,8 +11,8 @@ test('sphere controls, previews, undo, and restart preserve game state',async()=
     return elements.get(id);
   };
   const classes=new Set(),document={getElementById:element,body:{classList:{toggle(name,on){on?classes.add(name):classes.delete(name);}}},listeners:{},addEventListener(type,handler){this.listeners[type]=handler;}};
-  let lastState,rotationCount=0,zoomCount=0;
-  const view={render(state){lastState=state;},pick:event=>event.node??null,surfacePoint:event=>event.surface??null,reset(){},snapshot:()=>({camera:'snapshot'}),restore(saved){assert.equal(saved.camera,'snapshot');},beginRotate(){rotationCount++;},rotate(){rotationCount++;},endRotate(){},zoomAt(){zoomCount++;}};
+  let lastState,rotationCount=0,zoomCount=0,panDelta;
+  const view={render(state){lastState=state;},pick:event=>event.node??null,surfacePoint:event=>event.surface??null,reset(){},snapshot:()=>({camera:'snapshot'}),restore(saved){assert.equal(saved.camera,'snapshot');},pan(dx,dy){panDelta=[dx,dy];},beginRotate(){rotationCount++;},rotate(){rotationCount++;},endRotate(){},zoomAt(){zoomCount++;}};
   const context=vm.createContext({...geometry,document,console,createSphereView:()=>view,window:{addEventListener(){}},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame:callback=>callback()});
   const source=(await readFile(new URL('./sphere-game.js',import.meta.url),'utf8')).replace(/^import .*\n/gm,'');
   vm.runInContext(source,context);const run=code=>vm.runInContext(code,context),canvas=element('board');
@@ -25,10 +25,30 @@ test('sphere controls, previews, undo, and restart preserve game state',async()=
   canvas.listeners.click({button:0,node:b});assert.equal(run('arcs.length'),1);
   canvas.listeners.pointermove({node:c});assert.equal(lastState.preview.b,c);assert.equal(lastState.invalid,false);
   canvas.listeners.click({button:0,node:c});assert.equal(run('arcs.length'),2);
-  canvas.listeners.pointerdown({button:1,pointerId:5,preventDefault(){}});
-  canvas.listeners.pointermove({pointerId:5,node:a});assert.equal(rotationCount,2);
+  canvas.listeners.pointerdown({button:1,pointerId:5,clientX:100,clientY:100,preventDefault(){}});
+  canvas.listeners.pointermove({pointerId:5,clientX:140,clientY:120,node:a});assert.equal(rotationCount,0);
+  assert.deepEqual(panDelta,[40,20]);
   canvas.listeners.click({button:0,node:a});assert.equal(run('arcs.length'),2);
   canvas.listeners.pointerup({pointerId:5});
+  const beforeRightDrag=rotationCount;
+  canvas.listeners.pointerdown({button:2,pointerId:6,clientX:100,clientY:100,preventDefault(){}});
+  document.listeners.contextmenu({target:canvas,preventDefault(){}});
+  assert.equal(run('arcs.length'),2); // Context-menu timing cannot undo during a drag.
+  canvas.listeners.pointermove({pointerId:6,clientX:102,clientY:101});
+  assert.equal(rotationCount,beforeRightDrag+1); // Ignore minor hand jitter.
+  canvas.listeners.pointermove({pointerId:6,clientX:150,clientY:120});
+  assert.equal(rotationCount,beforeRightDrag+2);
+  canvas.listeners.pointerup({pointerId:6,clientX:100,clientY:100});
+  document.listeners.contextmenu({target:canvas,preventDefault(){}});
+  assert.equal(run('arcs.length'),2); // Even dragging back to the start must not undo.
+  canvas.listeners.pointerdown({button:2,pointerId:7,clientX:100,clientY:100,preventDefault(){}});
+  canvas.listeners.pointerup({pointerId:7,clientX:102,clientY:101});
+  document.listeners.contextmenu({target:canvas,preventDefault(){}});
+  assert.equal(run('arcs.length'),1); // A right-click undoes exactly once.
+  canvas.listeners.click({button:0,node:c});assert.equal(run('arcs.length'),2);
+  canvas.listeners.pointerdown({button:2,pointerId:8,clientX:100,clientY:100,preventDefault(){}});
+  canvas.listeners.pointercancel({pointerId:8,clientX:100,clientY:100});
+  assert.equal(run('arcs.length'),2);
   canvas.listeners.wheel({preventDefault(){}});assert.equal(zoomCount,1);
   document.listeners.contextmenu({preventDefault(){}});assert.equal(run('arcs.length'),1);
   assert.equal(run('start'),b);

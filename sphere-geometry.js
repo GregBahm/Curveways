@@ -43,18 +43,28 @@ function contains(arc,p){
 export function conflicts(a,b){
   const shared=[a.a,a.b].filter(p=>[b.a,b.b].some(q=>distance(p,q)<1e-6));
   const forbidden=p=>!shared.some(q=>distance(p,q)<1e-5);
-  const cosine=dot(a.n,b.n),denom=1-cosine*cosine;
-  if(denom<1e-12){
-    if(Math.abs(a.d-(cosine>0?b.d:-b.d))>1e-6)return false;
+  const cosine=dot(a.n,b.n),axisVector=cross(a.n,b.n),denom=dot(axisVector,axisVector);
+  if(denom<1e-20&&Math.abs(a.d-(cosine>0?b.d:-b.d))<1e-10){
     return [a.a,a.b,pointOnArc(a,.5)].some(p=>contains(b,p)&&forbidden(p))||[b.a,b.b,pointOnArc(b,.5)].some(p=>contains(a,p)&&forbidden(p));
+  }
+  if(denom<1e-24)return false;
+  const axis=unit(axisVector);
+  if(shared.length){
+    // The intersection line passes through the known node. Its other sphere
+    // intersection is a reflection along that line; no near-parallel plane solve.
+    const other=sub(shared[0],mul(axis,2*dot(shared[0],axis)));
+    return forbidden(other)&&contains(a,other)&&contains(b,other);
   }
   const origin=add(mul(a.n,(a.d-cosine*b.d)/denom),mul(b.n,(b.d-cosine*a.d)/denom));
   const remaining=1-dot(origin,origin);
   if(remaining < -1e-8)return false;
-  const axis=unit(cross(a.n,b.n)),offset=mul(axis,Math.sqrt(Math.max(0,remaining)));
+  const offset=mul(axis,Math.sqrt(Math.max(0,remaining)));
   return [add(origin,offset),sub(origin,offset)].some(p=>contains(a,p)&&contains(b,p)&&forbidden(p));
 }
-export function legal(arc,arcs){return !!arc&&!arcs.some(other=>conflicts(arc,other));}
+export function legal(arc,arcs){
+  return !!arc&&!arcs.some(other=>
+    (distance(arc.a,other.a)<1e-6&&distance(arc.b,other.b)<1e-6)||conflicts(arc,other));
+}
 export function hasLegalContinuation(nodes,arcs){
   if(!arcs.length)return true;
   const last=arcs.at(-1),t=endTangent(last);

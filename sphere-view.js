@@ -4,17 +4,19 @@ import {pointOnArc} from './sphere-geometry.js';
 export function createSphereView(canvas){
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-  renderer.setClearColor('#eff3e9');
+  renderer.setClearColor('#eeeeee');
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.1;
   const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-1.5,1.5,1.5,-1.5,.1,20);
   camera.position.z=4;
   const globe=new THREE.Group();scene.add(globe);
-  globe.add(new THREE.Mesh(new THREE.SphereGeometry(.998,96,64),new THREE.MeshStandardMaterial({color:'#e0e8d5',roughness:.95,metalness:0})));
-  scene.add(new THREE.HemisphereLight('#ffffff','#8c9c7c',2.5));
-  const light=new THREE.DirectionalLight('#fffdf4',3);light.position.set(-3,5,5);scene.add(light);
-  const nodeGeometry=new THREE.SphereGeometry(.0048,16,10),nodeMaterial=new THREE.MeshBasicMaterial({color:'#486047'});
-  const arcMaterial=new THREE.MeshBasicMaterial({color:'#437453'}),validMaterial=new THREE.MeshBasicMaterial({color:'#286e48'}),invalidMaterial=new THREE.MeshBasicMaterial({color:'#cb514b'});
+  globe.add(new THREE.Mesh(new THREE.SphereGeometry(.998,96,64),new THREE.MeshStandardMaterial({color:'#777777',roughness:.95,metalness:0})));
+  scene.add(new THREE.HemisphereLight('#ffffff','#888888',2.5));
+  const light=new THREE.DirectionalLight('#ffffff',3);light.position.set(-3,5,5);scene.add(light);
+  const nodeGeometry=new THREE.SphereGeometry(.0048,16,10),nodeMaterial=new THREE.MeshBasicMaterial({color:'#444444'});
+  const arcMaterial=new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false}),validMaterial=new THREE.MeshBasicMaterial({color:'#555555'}),invalidMaterial=new THREE.MeshBasicMaterial({color:'#cb514b'});
+  const heatColors=['#102878','#164cbd','#1489df','#14bce8','#28eaff'].map(color=>new THREE.Color(color));
+  let coloredArcs=[];
   let nodeMesh=null,nodeCount=0,width=1,height=1,zoom=1,offsetX=0,offsetY=0;
   const arcMeshes=new Map(),dummy=new THREE.Object3D(),raycaster=new THREE.Raycaster();
   let previewMesh=null,previewArc=null,drag=null;
@@ -27,6 +29,25 @@ export function createSphereView(canvas){
     return new THREE.Mesh(new THREE.TubeGeometry(new SurfaceCurve(),segments,.0015,5,false),material);
   }
   function discard(mesh){globe.remove(mesh);mesh.geometry.dispose();}
+  function updateGradient(){
+    if(coloredArcs.length===state.arcs.length&&coloredArcs.every((arc,i)=>arc===state.arcs[i]))return;
+    coloredArcs=[...state.arcs];
+    const total=state.arcs.reduce((sum,arc)=>sum+arc.sweep*arc.r,0);
+    let traveled=0;
+    const color=new THREE.Color();
+    for(const arc of state.arcs){
+      const geometry=arcMeshes.get(arc).geometry,{tubularSegments,radialSegments}=geometry.parameters;
+      const colors=new Float32Array(geometry.attributes.position.count*3),arcLength=arc.sweep*arc.r;
+      for(let ring=0;ring<=tubularSegments;ring++){
+        const progress=Math.min(1,(traveled+arcLength*ring/tubularSegments)/(total||1));
+        const position=progress*(heatColors.length-1),stop=Math.min(heatColors.length-2,Math.floor(position));
+        color.copy(heatColors[stop]).lerp(heatColors[stop+1],position-stop);
+        for(let side=0;side<=radialSegments;side++)color.toArray(colors,(ring*(radialSegments+1)+side)*3);
+      }
+      geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+      traveled+=arcLength;
+    }
+  }
   function render(next=state){
     state=next;
     if(nodeCount!==state.nodes.length){
@@ -44,6 +65,7 @@ export function createSphereView(canvas){
     const active=new Set(state.arcs);
     for(const [arc,mesh]of arcMeshes)if(!active.has(arc)){discard(mesh);arcMeshes.delete(arc);}
     for(const arc of state.arcs)if(!arcMeshes.has(arc)){const mesh=arcMesh(arc,arcMaterial);arcMeshes.set(arc,mesh);globe.add(mesh);}
+    updateGradient();
     if(previewArc!==state.preview){
       if(previewMesh)discard(previewMesh);
       previewArc=state.preview;previewMesh=previewArc?arcMesh(previewArc,state.invalid?invalidMaterial:validMaterial):null;
@@ -74,8 +96,11 @@ export function createSphereView(canvas){
     const mouse=ndc(event),oldH=1.35/zoom,delta=Math.max(-240,Math.min(240,event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?height:1)));
     zoom=Math.max(.55,Math.min(10,zoom*Math.exp(-delta*.0015)));
     const newH=1.35/zoom;offsetX+=mouse.x*(oldH-newH)*width/height;offsetY+=mouse.y*(oldH-newH);
-    // Pull the sphere back into view as the player zooms out.
-    if(zoom<=1){offsetX*=zoom;offsetY*=zoom;}
+    updateCamera();render();
+  }
+  function pan(dx,dy){
+    const unitsPerPixel=2.7/(zoom*height);
+    offsetX-=dx*unitsPerPixel;offsetY+=dy*unitsPerPixel;
     updateCamera();render();
   }
   function trackball(event){
@@ -90,5 +115,5 @@ export function createSphereView(canvas){
   function reset(){zoom=1;offsetX=offsetY=0;globe.quaternion.identity();updateCamera();render();}
   function snapshot(){return {zoom,offsetX,offsetY,rotation:globe.quaternion.toArray()};}
   function restore(saved){zoom=saved.zoom;offsetX=saved.offsetX;offsetY=saved.offsetY;globe.quaternion.fromArray(saved.rotation);updateCamera();render();}
-  return {render,pick,surfacePoint,zoomAt,beginRotate,rotate,endRotate,reset,snapshot,restore};
+  return {render,pick,surfacePoint,zoomAt,pan,beginRotate,rotate,endRotate,reset,snapshot,restore};
 }
