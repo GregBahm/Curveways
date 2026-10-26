@@ -25,6 +25,14 @@ test('sphere controls, previews, undo, and restart preserve game state',async()=
   canvas.listeners.click({button:0,node:b});assert.equal(run('arcs.length'),1);
   canvas.listeners.pointermove({node:c});assert.equal(lastState.preview.b,c);assert.equal(lastState.invalid,false);
   canvas.listeners.click({button:0,node:c});assert.equal(run('arcs.length'),2);
+  // Repeating the same directed pair highlights the original arc, not a new preview.
+  run('start=fixture[0];');
+  canvas.listeners.pointermove({node:b});
+  assert.equal(lastState.blockedArc,run('arcs[0]'));
+  assert.equal(lastState.preview,null);assert.equal(lastState.invalid,true);
+  canvas.listeners.click({button:0,node:b});assert.equal(run('arcs.length'),2);
+  canvas.listeners.pointerleave();assert.equal(lastState.blockedArc,null);
+  run('cancel();');
   canvas.listeners.pointerdown({button:1,pointerId:5,clientX:100,clientY:100,preventDefault(){}});
   canvas.listeners.pointermove({pointerId:5,clientX:140,clientY:120,node:a});assert.equal(rotationCount,0);
   assert.deepEqual(panDelta,[40,20]);

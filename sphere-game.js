@@ -1,4 +1,4 @@
-import {greatArc,throughArc,tangentArc,endTangent,legal,hasLegalContinuation,randomNodes,easeNodes,distance} from './sphere-geometry.js';
+import {greatArc,throughArc,tangentArc,endTangent,legal,hasLegalContinuation,randomNodes,easeNodes,distance,directedConnection} from './sphere-geometry.js';
 import {createSphereView} from './sphere-view.js';
 
 const $=id=>document.getElementById(id),canvas=$('board');
@@ -7,13 +7,13 @@ try{view=createSphereView(canvas);}catch(error){
   $('setup').insertAdjacentHTML('afterbegin','<p>This game requires WebGL. Enable hardware acceleration in your browser and reload.</p>');
   console.error(error);throw error;
 }
-let nodes=[],arcs=[],start=null,end=null,hover=null,preview=null,invalid=false;
+let nodes=[],arcs=[],start=null,end=null,hover=null,preview=null,invalid=false,blockedArc=null;
 let playing=false,gameOver=false,finishedGame=null,generation=0,rotating=null,seed=Math.floor(Math.random()*4294967296);
 let rotationGesture=null;
-function draw(){view.render({nodes,arcs,start,end,hover,preview,invalid});}
+function draw(){view.render({nodes,arcs,start,end,hover,preview,invalid,blockedArc});}
 function message(text){canvas.setAttribute('aria-description',text);}
 function over(value){gameOver=value;document.body.classList.toggle('game-over',value);$('game-over').hidden=!value;$('setup').hidden=!value;}
-function cancel(){start=arcs.at(-1)?.b??null;end=preview=hover=null;invalid=false;draw();}
+function cancel(){start=arcs.at(-1)?.b??null;end=preview=hover=blockedArc=null;invalid=false;draw();}
 function commit(){
   if(!preview||invalid)return;
   arcs.push(preview);cancel();
@@ -25,10 +25,13 @@ function commit(){
 function updatePointer(event){
   if(!playing&&!gameOver)return;
   hover=view.pick(event,nodes);
+  blockedArc=null;
   if(arcs.length){
     end=hover&&hover!==start?hover:null;
     const arc=end?tangentArc(start,end,endTangent(arcs.at(-1))):null;
     preview=arc||(end?greatArc(start,end):null);invalid=!!end&&!legal(arc,arcs);
+    blockedArc=end?directedConnection(start,end,arcs):null;
+    if(blockedArc)preview=null;
   }else if(start&&end){
     const point=view.surfacePoint(event);
     preview=point&&distance(point,start)>.001&&distance(point,end)>.001?throughArc(start,end,point):preview||greatArc(start,end);
@@ -53,7 +56,7 @@ canvas.addEventListener('pointermove',event=>{
   }
   updatePointer(event);
 });
-canvas.addEventListener('pointerleave',()=>{if(rotating!==null)return;hover=null;if(arcs.length){end=preview=null;}else if(!end)preview=null;draw();});
+canvas.addEventListener('pointerleave',()=>{if(rotating!==null)return;hover=blockedArc=null;if(arcs.length){end=preview=null;}else if(!end)preview=null;draw();});
 canvas.addEventListener('click',event=>{
   if(!playing||rotating!==null||event.button!==0)return;
   updatePointer(event);

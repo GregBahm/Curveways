@@ -57,4 +57,11 @@ test('camera zoom, trackball rotation, and occluded-node picking use consistent 
   assert.deepEqual(colorAt(paths()[1],true),hot);
   state.arcs.pop();view.render(state);
   assert.deepEqual(colorAt(mesh,true),hot); // Undo redistributes the full gradient too.
+  const normalMaterial=mesh.material;
+  state.blockedArc=first;view.render(state);
+  assert.ok(mesh.material.color.r>mesh.material.color.b);
+  assert.equal(mesh.material.vertexColors,false);
+  state.blockedArc=null;view.render(state);
+  assert.equal(mesh.material,normalMaterial);
+  assert.deepEqual(colorAt(mesh,true),hot);
 });

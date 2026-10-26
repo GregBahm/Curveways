@@ -13,7 +13,8 @@ export function createSphereView(canvas){
   globe.add(new THREE.Mesh(new THREE.SphereGeometry(.998,96,64),new THREE.MeshStandardMaterial({color:'#777777',roughness:.95,metalness:0})));
   scene.add(new THREE.HemisphereLight('#ffffff','#888888',2.5));
   const light=new THREE.DirectionalLight('#ffffff',3);light.position.set(-3,5,5);scene.add(light);
-  const nodeGeometry=new THREE.SphereGeometry(.0048,16,10),nodeMaterial=new THREE.MeshBasicMaterial({color:'#444444'});
+  const nodeGeometry=new THREE.SphereGeometry(.0048,16,10),nodeMaterial=new THREE.MeshBasicMaterial({color:'#ffffff'});
+  const unconnectedColor=new THREE.Color('#444444'),connectedColor=new THREE.Color('#249bdc');
   const arcMaterial=new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false}),validMaterial=new THREE.MeshBasicMaterial({color:'#555555'}),invalidMaterial=new THREE.MeshBasicMaterial({color:'#cb514b'});
   const heatColors=['#102878','#164cbd','#1489df','#14bce8','#28eaff'].map(color=>new THREE.Color(color));
   let coloredArcs=[];
@@ -54,18 +55,22 @@ export function createSphereView(canvas){
       if(nodeMesh){globe.remove(nodeMesh);nodeMesh.dispose();}
       nodeCount=state.nodes.length;nodeMesh=new THREE.InstancedMesh(nodeGeometry,nodeMaterial,nodeCount);nodeMesh.frustumCulled=false;globe.add(nodeMesh);
     }
-    const selected=new Set(state.arcs.flatMap(arc=>[arc.a,arc.b]));
+    const connected=new Set(state.arcs.flatMap(arc=>[arc.a,arc.b]));
+    const selected=new Set(connected);
     if(state.start)selected.add(state.start);if(state.end)selected.add(state.end);
     state.nodes.forEach((p,i)=>{
       dummy.position.copy(vector(p).multiplyScalar(1.004));
       dummy.scale.setScalar(p===state.hover||p===state.start||p===state.end?2:selected.has(p)?1.5:1);
       dummy.updateMatrix();nodeMesh.setMatrixAt(i,dummy.matrix);
+      nodeMesh.setColorAt(i,connected.has(p)?connectedColor:unconnectedColor);
     });
     if(nodeMesh)nodeMesh.instanceMatrix.needsUpdate=true;
+    if(nodeMesh?.instanceColor)nodeMesh.instanceColor.needsUpdate=true;
     const active=new Set(state.arcs);
     for(const [arc,mesh]of arcMeshes)if(!active.has(arc)){discard(mesh);arcMeshes.delete(arc);}
     for(const arc of state.arcs)if(!arcMeshes.has(arc)){const mesh=arcMesh(arc,arcMaterial);arcMeshes.set(arc,mesh);globe.add(mesh);}
     updateGradient();
+    for(const [arc,mesh]of arcMeshes)mesh.material=arc===state.blockedArc?invalidMaterial:arcMaterial;
     if(previewArc!==state.preview){
       if(previewMesh)discard(previewMesh);
       previewArc=state.preview;previewMesh=previewArc?arcMesh(previewArc,state.invalid?invalidMaterial:validMaterial):null;

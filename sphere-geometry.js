@@ -61,10 +61,8 @@ export function conflicts(a,b){
   const offset=mul(axis,Math.sqrt(Math.max(0,remaining)));
   return [add(origin,offset),sub(origin,offset)].some(p=>contains(a,p)&&contains(b,p)&&forbidden(p));
 }
-export function legal(arc,arcs){
-  return !!arc&&!arcs.some(other=>
-    (distance(arc.a,other.a)<1e-6&&distance(arc.b,other.b)<1e-6)||conflicts(arc,other));
-}
+export function directedConnection(a,b,arcs){return arcs.find(arc=>distance(a,arc.a)<1e-6&&distance(b,arc.b)<1e-6)??null;}
+export function legal(arc,arcs){return !!arc&&!directedConnection(arc.a,arc.b,arcs)&&!arcs.some(other=>conflicts(arc,other));}
 export function hasLegalContinuation(nodes,arcs){
   if(!arcs.length)return true;
   const last=arcs.at(-1),t=endTangent(last);
