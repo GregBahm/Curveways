@@ -1,16 +1,29 @@
-# Orbit
+# Curveways
 
-A browser prototype for a node connection game. Requires Node.js; no packages to install.
+A browser game about tracing a continuous chain of circular arcs across a sphere. Built with Three.js; requires Node.js and a browser with WebGL 2.
 
-Run `npm start` and open http://localhost:3000. Run geometry checks with `npm test`.
+## Run
 
-The floating setup panel previews changes immediately: choose 50–2,000 random nodes and 0–40 simultaneous repulsion passes. Easing adjustments reuse the same random field. Press Start to hide setup and begin playing on the full-window playfield. Reload to set up another game.
+Run `npm install`, then `npm start`, and open http://localhost:3000. Run `npm test` for geometry, camera, and game-state checks.
 
-Select a start and end node, then move the pointer perpendicular to their chord to shape the first circular arc. Click to commit. After that, hover over a node to preview the next circular arc and click to extend the chain. Each arc inherits the previous endpoint tangent automatically; later arcs cannot be shaped manually. Crossing previews turn red and cannot be placed. Near zero curvature becomes a straight line; a direct reversal cannot continue smoothly. Escape cancels the preview while retaining the chain endpoint; Ctrl/Cmd+Z removes the last connection and restores the previous endpoint and direction. Resizing preserves board geometry.
+## Play
 
-Analytic segment/circle intersection checks reject crossings, tangencies, and overlaps. Connections may share endpoints. Passing through an unrelated node does not create a junction. The board is held in memory; refreshing starts over.
+- Adjust the floating setup panel to preview 50–2,000 nodes and 0–40 easing passes. Settings persist across refreshes. Nodes are sampled uniformly over the entire sphere, then repel nearby nodes along its surface.
+- Press Start. Select two visible nodes, move over the sphere to shape the first arc, and click to place it. Before selecting the second node, hovering previews the shortest surface route.
+- Hover over each next node to preview a circular arc that inherits the previous arc's directed surface tangent. Click to extend the chain. Every arc lies on the sphere; these are small-circle arcs, including great circles as a special case.
+- Middle-button drag rotates the sphere. Scroll zooms around the pointer. Nodes on the far side are hidden and cannot be selected; rotate to reach them. Rotation is available while shaping or previewing an arc.
+- Arcs may meet at shared node endpoints. Crossings elsewhere, overlaps, and retracing are invalid. Intersection checks use the sphere geometry, independently of the current camera view.
+- Right-click or Ctrl/Cmd+Z undoes. Escape cancels the current preview while retaining the chain endpoint.
+- If every possible next connection is blocked, colors invert and the Game over setup panel appears. Hover still previews blocked moves. Undo restores play, including after adjusting the new-game settings. Start generates a new board.
 
+The board and chain are held in memory; refreshing returns to setup with the saved slider settings. Easing reuses the same random seed while adjusting sliders; refreshing or starting another game uses a new seed.
 
-After each connection, every node is checked for a legal tangent continuation. If none remain, the game inverts its colors and displays the Game over setup panel. Right-click anywhere or press Ctrl/Cmd+Z to undo and resume, even after changing setup sliders. Start begins a fresh board using the current settings.
+## Implementation
 
-Scroll the wheel over the field to zoom around the pointer (0.2x–12x). Hold the middle mouse button and drag to pan. These controls also work on the game-over screen.
+`sphere-geometry.js` contains pure vector math, surface easing, circular arcs, and analytic intersection checks. `sphere-view.js` handles Three.js rendering, picking, zoom, and trackball rotation. `sphere-game.js` manages input and game state. Dependencies are served locally; no CDN is required.
+
+The original planar sources and tests remain as a reference. The active entry point is `sphere-game.js`.
+
+## 2D checkpoint
+
+The working planar prototype is committed on `main` at `ef6d8ce` (Build playable 2D Curveways prototype). The spherical version is on `sphere-prototype`. To return to 2D, stop the server, switch to `main`, then run `npm start` again.

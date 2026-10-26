@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
-const files = { '/': 'index.html', '/index.html': 'index.html', '/style.css': 'style.css', '/game.js': 'game.js', '/geometry.js': 'geometry.js' };
+const files = { '/': 'index.html', '/index.html': 'index.html', '/style.css': 'style.css', '/game.js': 'game.js', '/geometry.js': 'geometry.js', '/sphere-game.js': 'sphere-game.js', '/sphere-view.js': 'sphere-view.js', '/sphere-geometry.js': 'sphere-geometry.js', '/three/three.module.js': 'node_modules/three/build/three.module.js', '/three/three.core.js': 'node_modules/three/build/three.core.js' };
 http.createServer(async (req, res) => {
   const file = files[new URL(req.url, 'http://localhost').pathname];
   if (!file) { res.writeHead(404); return res.end('Not found'); }

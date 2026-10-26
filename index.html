@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Orbit</title><link rel="stylesheet" href="style.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Curveways</title><link rel="stylesheet" href="style.css"></head>
 <body>
-  <main class="board-wrap"><canvas id="board" aria-label="Node connection playfield. Select two nodes and shape the first arc. Then click each next node to continue smoothly. Escape cancels the preview; Control or Command Z undoes."></canvas></main>
+  <main class="board-wrap"><canvas id="board" aria-label="Spherical node connection playfield. Select two nodes and shape the first arc. Then click each next node to continue smoothly. Middle-drag rotates, the wheel zooms, right-click undoes, and Escape cancels the preview."></canvas></main>
   <section id="setup" aria-label="Board setup">
     <h1 id="game-over" hidden>Game over</h1>
     <label for="count">Node count <output id="count-value">1,000</output></label>
@@ -11,6 +11,6 @@
     <input id="easing" type="range" min="0" max="40" value="12">
     <button id="start" disabled>Start</button>
   </section>
-  <script type="module" src="game.js"></script>
+  <script type="module" src="sphere-game.js"></script>
 </body></html>
 
